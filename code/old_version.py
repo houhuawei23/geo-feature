@@ -8,9 +8,6 @@ from multiprocessing import Manager
 from sklearn.model_selection import train_test_split
 
 
-dv.make_mnist(True)
-
-
 def label_parallel(info_list, unit_hop, ratio, percentage, l, new_data_dict):
     dataset = info_list[0]
     ave_egr = info_list[1]
@@ -91,7 +88,7 @@ bhop: N * N, bone hop
 
 hyper_uhop: 1 * 1 * 3, [[min, mean, max]] of bhop
 
-return: pdict[i]
+return: pdict[i][j]: j
     0: dataset
     1: ave_egr
     2: path_dict
@@ -164,7 +161,7 @@ import os
 from PIL import Image
 def read(dataset_name):
     cur_dir = os.getcwd()
-    data_dir = os.path.join(cur_dir, "datas", dataset_name, 'train')
+    data_dir = os.path.join(cur_dir, "dataset", dataset_name, 'train')
     classes = os.listdir(data_dir)
     
     # Initialize empty lists to store the image data and labels
@@ -199,8 +196,8 @@ def read(dataset_name):
     x_train, x_test, y_train, y_test = train_test_split(data, labels, test_size=0.2, random_state=42, stratify=labels)
 
     return (x_train, y_train), (x_test, y_test)
-
-def main(dataset_name):
+    
+def main_origin(dataset_name):
     print("processing")
     # knn = [8, 9, 10, 11, 12, 13, 14, 15]
     knn = [8, 9]
@@ -265,5 +262,8 @@ result[i]:
 5: eval_value_n
 """
 if __name__ == "__main__":
+    dv.make_mnist(True) 
+    
     dataset_name = "mnist_50"
-    main(dataset_name)
+    k = 8
+    hyper_ratio, hyper_uhop, pdict = hyper_computation_parl(k, dataset_name)

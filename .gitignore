@@ -1,5 +1,13 @@
 **/data
-*.zip
+**/dataset
+**/datas
 **/__pycache__
-**/*.pyc
-**/*.pyo
+**/*.model
+**/.vscode
+*.zip
+*.pyc
+*.pyo
+**/res.txt
+**/res
+**/pics
+**/results

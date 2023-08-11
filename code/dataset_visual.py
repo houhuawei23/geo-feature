@@ -20,24 +20,24 @@ def make_mnist(flag = False):
     num = np.zeros(10)
     if(flag == True):
         for i in label:
-            if os.path.exists(f"../datas/mnist/train/{i}"):#如果路径存在则删除
-                shutil.rmtree(f"../datas/mnist/train/{i}")
-            os.makedirs(f"../datas/mnist/train/{i}")
+            if os.path.exists(f"../dataset/mnist/train/{i}"):#如果路径存在则删除
+                shutil.rmtree(f"../dataset/mnist/train/{i}")
+            os.makedirs(f"../dataset/mnist/train/{i}")
 
-        with open("../datas/mnist/train/image_list.txt", 'w') as img_list:
+        with open("../dataset/mnist/train/image_list.txt", 'w') as img_list:
             i = 0
             for img, label in zip(x, y):
                 if (num[label] >= 10000):
                     continue
                 else:
                     img = Image.fromarray(img) # 将array转化成图片
-                    img_save_path = f"../datas/mnist/train/{label}/{i}.jpg" # 图片保存路径
+                    img_save_path = f"../dataset/mnist/train/{label}/{i}.jpg" # 图片保存路径
                     img.save(img_save_path) # 保存图片
                     img_list.write(img_save_path + "\t" + str(label) + "\n")
                     i += 1
                     num[label] = num[label] + 1
 
-        #os.remove("../datas/mnist/train/image_list.txt")
+        #os.remove("../dataset/mnist/train/image_list.txt")
     print("finished!")
     return True
 
@@ -52,29 +52,29 @@ def make_fashion_mnist(flag = False):
     print("fasion_mnist")
     if(flag == True):
         for i in label:
-            if os.path.exists(f"../datas/fashion_mnist/train/{i}"):  # 如果路径存在则删除
-                shutil.rmtree(f"../datas/fashion_mnist/train/{i}")
-            os.makedirs(f"../datas/fashion_mnist/train/{i}")
+            if os.path.exists(f"../dataset/fashion_mnist/train/{i}"):  # 如果路径存在则删除
+                shutil.rmtree(f"../dataset/fashion_mnist/train/{i}")
+            os.makedirs(f"../dataset/fashion_mnist/train/{i}")
 
-        with open("../datas/fashion_mnist/train/image_list.txt", 'w') as img_list:
+        with open("../dataset/fashion_mnist/train/image_list.txt", 'w') as img_list:
             i = 0
             for img, label in zip(x, y):
                 if (num[label] >= 1000):
                     continue
                 else:
                     img = Image.fromarray(img) # 将array转化成图片
-                    img_save_path = f"../datas/fashion_mnist/train/{label}/{i}.jpg" # 图片保存路径
+                    img_save_path = f"../dataset/fashion_mnist/train/{label}/{i}.jpg" # 图片保存路径
                     img.save(img_save_path) # 保存图片
                     img_list.write(img_save_path + "\t" + str(label) + "\n")
                     i += 1
                     num[label] = num[label] + 1
-        #os.remove("../datas/fashion_mnist/train/image_list.txt")
+        #os.remove("../dataset/fashion_mnist/train/image_list.txt")
     return True
 def class_read(name, k):
     cur_dir = os.getcwd() # /home/hhw/geo_feature
     # print(cur_dir)
-    imgpath = os.path.join(cur_dir, f"datas/{name}/train/"+ str(k))
-    # imgpath = f"../datas/{name}/train/"+ str(k)
+    imgpath = os.path.join(cur_dir, f"dataset/{name}/train/"+ str(k))
+    # imgpath = f"../dataset/{name}/train/"+ str(k)
     imgfiles = os.listdir(imgpath)
     
     imgs1=[]

@@ -142,7 +142,7 @@ def mnist_cnn(x_train, y_train, x_test, y_test):
 """
 dv.make_mnist(True)
 
-(x_train, y_train), (x_test, y_test) = dl.load_mnist(flag = True, path='../datas/mnist/train/')
+(x_train, y_train), (x_test, y_test) = dl.load_mnist(flag = True, path='../dataset/mnist/train/')
 print(np.shape(x_train))
 eval_value_o = mnist_rnn(x_train, y_train, x_test, y_test)
 print(eval_value_o)

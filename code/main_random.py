@@ -124,7 +124,7 @@ def load_fashion_mnist_random(path = '', percentage = 1):
 
 def main():
     #dv.make_mnist(True)
-    (x_train, y_train), (x_test, y_test) = load_fashion_mnist_random(path='../datas/fashion_mnist/train/', percentage = 0.7)
+    (x_train, y_train), (x_test, y_test) = load_fashion_mnist_random(path='../dataset/fashion_mnist/train/', percentage = 0.7)
     print(np.shape(x_train))
     print(np.shape(y_train))
     eval_value_n = fnn.mnist_fnn(x_train, y_train, x_test, y_test)

@@ -257,23 +257,21 @@ def dataset_compression_index(ave_egr, path_dict, gdist, unit_hop, ratio, path_i
                     # remove the start point and the goal point
                     node_hops = len(node_list) - 2
                     # egr = ave_egr[i][j]
-                    if (egr > ratio): # egr > ratio threshold 曲率足够大
+                    if (egr > ratio): # egr > ratio threshold 越接近1，曲率越小，弯曲程度越小
 
                         g = gdist[i][j]
-                        if (node_hops > (int(g * unit_hop))): # 路径长度足够长
+                        if (node_hops > (int(g * unit_hop))): # 跳节点数足够多
                             seg_egr = []
                             remove_candi = []
                             for k in range(node_hops):  # N worst
-                                seg_egr.append(
-                                    ave_egr[node_list[k]][node_list[k+2]])
+                                seg_egr.append(ave_egr[node_list[k]][node_list[k+2]])
                                 remove_candi.append(node_list[k+1])
 
                             seg_egr = np.array(seg_egr)
                             minimal_index = np.argsort(seg_egr)
                             for n in range((node_hops - (int(g * unit_hop)))):
                                 index = minimal_index[n]
-                                remove_tag[remove_candi[index]
-                                           ] = remove_tag[remove_candi[index]] + 1
+                                remove_tag[remove_candi[index]] = remove_tag[remove_candi[index]] + 1
     for i in range(num):
         remove_tag[i] = remove_tag[i]/weight[i]
     return remove_tag

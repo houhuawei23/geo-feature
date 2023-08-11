@@ -60,7 +60,7 @@ def load_mnist(flag = False, path = ''):
     return (x_train, y_train), (x_test, y_test)
 
 
-#path = '../datas/mnist/train/'
+#path = '../dataset/mnist/train/'
 #(a,b), (c,d) = load_mnist(True, path)
 #print(np.shape(a), np.shape(b))
 

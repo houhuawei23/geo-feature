@@ -99,7 +99,7 @@ def load_mnist_random(path = '', percentage = 1):
 
 def main():
     dv.make_mnist(True)
-    (x_train, y_train), (x_test, y_test) = load_mnist_random(path='../datas/mnist/train/', percentage = 0.2)
+    (x_train, y_train), (x_test, y_test) = load_mnist_random(path='../dataset/mnist/train/', percentage = 0.2)
     eval_value_n = fnn.mnist_fnn(x_train, y_train, x_test, y_test)
     print("Rhyperparmater:knn-unit_hop-ratio-percentage-result-result(modified)", eval_value_n)
 
