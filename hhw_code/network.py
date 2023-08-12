@@ -1,19 +1,22 @@
+import os
+import time
+
 import torch
 from torch import nn
-import time
-import os
+
 import utils
 
 curfile_dir = os.path.dirname(os.path.abspath(__file__))    
 dataset_dir = os.path.join(curfile_dir, '..', 'dataset')
 pics_dir = os.path.join(curfile_dir, 'pics')
 
+
 def train(net, train_iter, test_iter, num_epochs, lr, device):
+    print('training on', device)
     def init_weights(m):
         if type(m) == nn.Linear or type(m) == nn.Conv2d:
             torch.nn.init.xavier_uniform_(m.weight)
     net.apply(init_weights)
-    print('training on', device)
     net.to(device)
     optimizer = torch.optim.SGD(net.parameters(), lr=lr)
     loss = nn.CrossEntropyLoss()
@@ -25,6 +28,8 @@ def train(net, train_iter, test_iter, num_epochs, lr, device):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
+            # print(f"train: {X.shape}, {y.shape}")
+            # print(f"train, type: {type(X)}, {type(y)}")
             X = X.to(device)
             y = y.to(device)
             y_hat = net(X)
@@ -44,14 +49,8 @@ def train(net, train_iter, test_iter, num_epochs, lr, device):
               % (epoch + 1, train_l, train_acc, test_acc, time.time() - start))
         
         animator.add(epoch + 1, (train_l, train_acc, test_acc))
-        animator.savefig(os.path.join(pics_dir, 'lenet_train.png'))
+    animator.savefig(os.path.join(pics_dir, 'lenet_train.png'))
     return net
-
-
-
-
-
-
 
 
 class Reshape(nn.Module):
@@ -64,7 +63,7 @@ class Reshape(nn.Module):
     
 LeNet = nn.Sequential(
     # todo
-    Reshape(-1, 1, 28, 28),
+    # Reshape(-1, 1, 28, 28),
     nn.Conv2d(1, 6, kernel_size=5, padding=2), nn.Sigmoid(),
     nn.MaxPool2d(kernel_size=2, stride=2),
     nn.Conv2d(6, 16, kernel_size=5), nn.Sigmoid(),
@@ -76,10 +75,10 @@ LeNet = nn.Sequential(
 )
 
 
-from dataset import load_data_mnist
-import os
 
 if __name__ == '__main__':
+    from data_utils import load_data_mnist
+    
     # print(LeNet)
     # X = torch.rand(1, 1, 28, 28)
     # for layer in LeNet:
@@ -93,8 +92,8 @@ if __name__ == '__main__':
     
     for X, y in train_iter:
         print('X', X.shape, 'y', y.shape)
+        print(f"type: X: {X.dtype}, y: {y.dtype}")
         break
-        # exit()
     
     device = utils.try_gpu(0)
     test_lenet = LeNet

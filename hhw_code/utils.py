@@ -1,12 +1,38 @@
-import matplotlib.pyplot as plt
+
+import os
 import torch
+import matplotlib.pyplot as plt
+import numpy as np
+
 from IPython import display
 from IPython import get_ipython
+
+
+def get_num_cores():
+    num_cores = os.cpu_count()
+    print('num_cores: ', num_cores)
+    return num_cores
 
 def try_gpu(i=0):
     if torch.cuda.device_count() >= i + 1:
         return torch.device(f'cuda:{i}')
     return torch.device('cpu')
+
+def is_jupyter():
+    """
+    Check if the code is running in jupyter notebook.
+    """
+    if get_ipython() == None:
+        return False
+    return True
+
+def set_seed(seed: int = 42):
+    print(f"Set seed {seed}")
+    torch.manual_seed(seed) # 为CPU设置随机种子
+    torch.cuda.manual_seed(seed) # 为当前GPU设置随机种子
+    torch.cuda.manual_seed_all(seed) # if you are using multi-GPU，为所有GPU设置随机种子
+    np.random.seed(seed) # Numpy module.
+    # random.seed(seed) # Python random module.
 
 def evaluate_accuracy(net, data_iter, device=None):
     if isinstance(net, torch.nn.Module):
@@ -36,14 +62,6 @@ def set_axes(axes, xlabel, ylabel, xlim, ylim, xscale, yscale, legend):
     if legend:
         axes.legend(legend)
     axes.grid()
-
-def is_jupyter():
-    """
-    Check if the code is running in jupyter notebook.
-    """
-    if get_ipython() == None:
-        return False
-    return True
 
 class TrainAnimator:
     """
