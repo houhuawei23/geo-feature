@@ -113,5 +113,14 @@ class TrainAnimator:
             plt.pause(0.001)
 
     
-    def savefig(self, fname):
-        plt.savefig(fname)
+    def savefig(self, dir, fname):
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        plt.savefig(os.path.join(dir, fname))
+        
+    def show(self):
+        if is_jupyter():
+            display.display(self.fig)
+            display.clear_output(wait=True)
+        else:
+            plt.show()

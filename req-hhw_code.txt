@@ -3,5 +3,6 @@ torchvision
 numpy
 scipy
 scikit-learn
+umap-learn
 matplotlib
-pandas
+seaborn

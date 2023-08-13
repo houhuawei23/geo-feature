@@ -11,5 +11,9 @@
 **/res
 **/pics
 **/results
-**/test.py
 **.pkl
+**/resources
+hhw_code/plt_test.py
+hhw_code/tmp.ipynb
+hhw_code/dim_reduce/
+hhw_code/restats

@@ -11,7 +11,7 @@ dataset_dir = os.path.join(curfile_dir, '..', 'dataset')
 pics_dir = os.path.join(curfile_dir, 'pics')
 
 
-def train(net, train_iter, test_iter, num_epochs, lr, device):
+def train(net, train_iter, test_iter, num_epochs, lr, device, save_dir=None, fname="train.png"):
     print('training on', device)
     def init_weights(m):
         if type(m) == nn.Linear or type(m) == nn.Conv2d:
@@ -49,7 +49,11 @@ def train(net, train_iter, test_iter, num_epochs, lr, device):
               % (epoch + 1, train_l, train_acc, test_acc, time.time() - start))
         
         animator.add(epoch + 1, (train_l, train_acc, test_acc))
-    animator.savefig(os.path.join(pics_dir, 'lenet_train.png'))
+    if save_dir:
+        animator.savefig(save_dir, fname)
+    else:
+        animator.savefig(pics_dir, fname)
+    # animator.show()
     return net
 
 
