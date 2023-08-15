@@ -2,16 +2,37 @@ import numpy as np
 
 import torch
 
-import sklearn.neighbors as sk_neighbors
+import sklearn.neighbors
 
-from scipy.spatial.distance import cdist
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import shortest_path
+import scipy.spatial.distance
+import scipy.sparse
+
+# import scipy.sparse
 
 from multiprocessing.pool import Pool
 
 
-def get_bone_weight(path_dict, path_index):
+def get_sorted_2did(
+    mat: np.ndarray,
+    ignore_val = None,
+    reverse: bool = False,
+):
+    raveled_mat = mat.ravel()
+    ignored_indices = np.where(np.isin(raveled_mat, ignore_val))[0]
+    raveled_mat[ignored_indices] = 999999 
+
+    sorted_indices = np.argsort(raveled_mat)
+
+    sorted_indices = sorted_indices[: -len(ignored_indices)]
+    
+    i_arr, j_arr = np.unravel_index(sorted_indices, mat.shape)
+    sorted_2did_list = list(zip(i_arr, j_arr)) 
+    if reverse:
+        sorted_2did_list = sorted_2did_list[::-1]
+    return list(sorted_2did_list)
+
+
+def get_bone_weight(bone_path_mask: np.ndarray, pre_matrix: np.ndarray):
     """
     input:
         path_dict: (N * N / 2), path_dict['i-j'] = [node_arr, length]
@@ -19,49 +40,20 @@ def get_bone_weight(path_dict, path_index):
     output:
         weight_node: N, weight_node[i] = the number of bones that i is in
     """
-    # print("get_bone_weight")
-    num = np.shape(path_index)[0]
-    weight_node = np.zeros(num)
+
+    num = bone_path_mask.shape[0]
+    bone_weight = np.zeros(num, dtype=np.int32)
     for i in range(num):
         for j in range(i + 1, num):
-            if path_index[i][j] == 1:
-                node_arr = path_dict[str(i) + "-" + str(j)]["node_arr"]
-                # print(node_arr)
-                for node in node_arr:
-                    weight_node[node] = weight_node[node] + 1
-    # print("get_bone_weight done")
-    weight_node = weight_node.astype(np.int32)
-    return weight_node
+            if bone_path_mask[i][j] == True:
+                path_arr = get_shortest_path(pre_matrix, i, j)
 
-def get_bone_path2(size, path_dict):
-    bone_path_mask = -np.ones((size, size))
-    # path_dict['i-j'] = node_arr
-    len_list = []
-    for item in path_dict.items():
-        len_list.append(len(item[1]))
-    print(f"max len: {max(len_list)}")
-    sorted_path = sorted(path_dict.items(), key=lambda item: len(item[1]), reverse=True)
-    # [('0-1', [[0, 1], 2]), ('0-2', [[0, 3, 2], 3]), ...]
-    # print(type(sort_path))
-    for _, path_arr in sorted_path:
-        # print(f"path_arr: {path_arr}")
-        path_len = len(path_arr)
-        start = path_arr[0]
-        end = path_arr[path_len - 1]
-        if (bone_path_mask[start][end] == 0) or (bone_path_mask[end][start] == 0):
-            # (start, end) or (end, start) is not bone
-            # already processed by else
-            continue
-        else:
-            for i in range(1, path_len - 1):
-                for j in range(i + 1, path_len - 2):
-                    bone_path_mask[path_arr[i]][path_arr[j]] = 0
-                    bone_path_mask[path_arr[j]][path_arr[i]] = 0
-            bone_path_mask[start][end] = 1
-            bone_path_mask[end][start] = 1
-    return bone_path_mask
+                for node in path_arr:
+                    bone_weight[node] = bone_weight[node] + 1
+    return bone_weight
 
-def get_bone_path(size, path_dict):
+
+def get_bone_path(path_len: np.ndarray, pre_matrix: np.ndarray):
     """
     input:
         path_dict: (N * N / 2), path_dict['i-j'] = node_arr
@@ -69,18 +61,26 @@ def get_bone_path(size, path_dict):
     output:
         bone_path_mask: N * N, path_index[i][j] = 1, if i-j is bone
     """
-    # print("bone_path")
-    bone_path_mask = np.ones((size, size), dtype=bool)
+    num = path_len.shape[0]
+    bone_path_mask = np.ones((num, num), dtype=bool)
     np.fill_diagonal(bone_path_mask, False)
     # path_dict['i-j'] = node_arr
-    sorted_path = sorted(
-        path_dict.items(), key=lambda item: len(item[1]), reverse=True
-    )
+    # sorted_path = sorted(
+    #     path_dict.items(), key=lambda item: len(item[1]), reverse=True
+    # )
+    # remove first size nodes, because path_len diagonal is all 0
+    # sorted_id = np.argsort(path_len.ravel())
+    # # ravel: flatten the matrix
+    # sorted_id_2d = np.unravel_index(sorted_id, path_len.shape)
+    # sorted_id_list = list(zip(sorted_id_2d[0], sorted_id_2d[1]))[num:]
+    # sorted_id_list.reverse() # 从大到小排列
+    sorted_2did_by_len = get_sorted_2did(path_len, reverse=True, ignore_val=0.0)
     # sorted_path = path_dict.items().sort(key=lambda item: len(item[1]), reverse=True)
     # [('0-1', [[0, 1], 2]), ('0-2', [[0, 3, 2], 3]), ...]
     # print(type(sort_path))
-    for _, path_arr in sorted_path:
+    for i, j in sorted_2did_by_len:
         # print(f"path_arr: {path_arr}")
+        path_arr = get_shortest_path(pre_matrix, i, j)
         path_len = len(path_arr)
 
         start = path_arr[0]
@@ -88,7 +88,9 @@ def get_bone_path(size, path_dict):
         if path_len == 2:
             bone_path_mask[start][end] = bone_path_mask[end][start] = False
             continue
-        if (bone_path_mask[start][end] == False) or (bone_path_mask[end][start] == False) :
+        if (bone_path_mask[start][end] == False) or (
+            bone_path_mask[end][start] == False
+        ):
             # (start, end) or (end, start) is not bone
             # already processed by else
             continue
@@ -113,7 +115,9 @@ def get_path_ave_egr(euc_dist, pre_matrix):
     """
     num = euc_dist.shape[0]
     path_ave_egr = np.zeros((num, num))
-    path_len = np.zeros((num, num), dtype=np.int8)  # 路径上节点数，geodesic_dist[i][j] 为 (i,) 的加权路径长度
+    path_len = np.zeros(
+        (num, num), dtype=np.int8
+    )  # 路径上节点数，geodesic_dist[i][j] 为 (i,) 的加权路径长度
     path_dict = {}
     for i in range(num):
         for j in range(i + 1, num):  # traverse the upper triangle
@@ -130,7 +134,7 @@ def get_path_ave_egr(euc_dist, pre_matrix):
                 else:  # i-j 不直接相连
                     # 计算路径上的平均 EGR
                     egr = 0
-                    for k in range(max(1, node_num - 2)): # 右开，不包括 node_num - 2
+                    for k in range(max(1, node_num - 2)):  # 右开，不包括 node_num - 2
                         # tmp = (
                         #     euc_dist[node_arr[k]][node_arr[k + 2]]
                         #     / geo_dist[node_arr[k]][node_arr[k + 2]]
@@ -138,13 +142,13 @@ def get_path_ave_egr(euc_dist, pre_matrix):
                         tmp1 = euc_dist[node_arr[k]][node_arr[k + 2]] / (
                             euc_dist[node_arr[k]][node_arr[k + 1]]
                             + euc_dist[node_arr[k + 1]][node_arr[k + 2]]
-                        ) 
+                        )
                         # if tmp - tmp1 > 1e-5:
                         #     print(f"tmp: {tmp:.3f}, tmp1: {tmp1:.3f}")
                         egr = egr + tmp1
                     path_ave_egr[i][j] = egr / node_num
                     path_dict[str(i) + "-" + str(j)] = node_arr
-    return path_ave_egr, path_len, path_dict
+    return path_ave_egr, path_len
 
 
 def get_shortest_path(pre_matrix, start_node, end_node):
@@ -172,7 +176,7 @@ def get_shortest_path(pre_matrix, start_node, end_node):
     return node_arr
 
 
-def get_geodesic_dist(knn_edist):
+def get_geo_dist(knn_edist):
     """
     input:
         knn_edist: N * N, k nearest neighbor
@@ -210,6 +214,110 @@ def get_knn_edist(euclidean_dist, k):
     return knn_edist
 
 
+def get_class_geo_feature_beta(label: int, X: np.ndarray, k: int = 10):
+    euc_dist = scipy.spatial.distance.cdist(X, X, metric="euclidean")
+
+    knn_edist = sklearn.neighbors.kneighbors_graph(
+        X, k, mode="distance", n_jobs=-1
+    ).toarray()  # 稀疏的
+
+    geo_dist, pre_matrix = scipy.sparse.csgraph.shortest_path(
+        knn_edist, directed=False, return_predecessors=True
+    )
+
+    path_aegr, path_len = get_path_ave_egr(euc_dist, pre_matrix)
+
+    bone_path_mask = get_bone_path(path_len, pre_matrix)
+
+    bone_weight = get_bone_weight(bone_path_mask, pre_matrix)
+
+    bone_ave_egr = np.multiply(bone_path_mask, path_aegr)
+
+    class_ave_egr = np.array([bone_ave_egr.mean(), bone_ave_egr.max()])  # min always 0
+    # 多少算稀疏？？half??
+    # geo_dist = np.where(geo_dist < 1e-6, 1, geo_dist)
+
+    # unit_len = path_len / geo_dist
+
+    unit_dist_per_lenth = geo_dist / np.where(path_len == 0, 1, path_len)
+
+    bone_udist = np.multiply(bone_path_mask, unit_dist_per_lenth)
+
+    class_udist = np.array([bone_udist.mean(), bone_udist.max()])  # min always 0
+
+    feature = {}
+    feature["label"] = label
+
+    feature["euc_dist"] = euc_dist
+    # feature['geo_dist'] = geo_dist
+    feature["pre_matrix"] = pre_matrix
+    feature["path_aegr"] = path_aegr
+    feature["path_len"] = path_len
+
+    feature["bone_path_mask"] = bone_path_mask
+
+    feature["bone_weight"] = bone_weight
+
+    feature["class_ave_egr"] = class_ave_egr
+    feature["class_udist"] = class_udist
+
+    # plt dsitribution bar chart
+    from test_all import plot_bar
+
+    fname_prefix = f"mnist_l{label}_k{k}_sz{X.shape[0]}"
+    fname_suffix = "zero.png"
+    plot_bar(
+        euc_dist.reshape(-1),
+        10,
+        title=fname_prefix + "_euc_dist",
+        fname=f"{fname_prefix}_euc_dist_{fname_suffix}",
+        ignore_zero=False,
+    )
+    # plot_bar(
+    #     geo_dist.reshape(-1),
+    #     10,
+    #     title=fname_prefix + "_geo_dist",
+    #     fname=f"{fname_prefix}_geo_dist_{fname_suffix}",
+    #     ignore_zero=False,
+    # )
+    plot_bar(
+        path_aegr.reshape(-1),
+        10,
+        title=fname_prefix + "_path_ave_egr",
+        fname=f"{fname_prefix}_path_ave_egr_{fname_suffix}",
+        ignore_zero=False,
+    )
+    plot_bar(
+        path_len.reshape(-1),
+        10,
+        title=fname_prefix + "_path_len",
+        fname=f"{fname_prefix}_path_len_{fname_suffix}",
+        ignore_zero=False,
+    )
+    plot_bar(
+        bone_weight.reshape(-1),
+        10,
+        title=fname_prefix + "_bone_weight",
+        fname=f"{fname_prefix}_bone_weight_{fname_suffix}",
+        ignore_zero=False,
+    )
+    plot_bar(
+        unit_dist_per_lenth.reshape(-1),
+        10,
+        title=fname_prefix + "_unit_dist_per_lenth",
+        fname=f"{fname_prefix}_unit_dist_per_lenth_{fname_suffix}",
+        ignore_zero=False,
+    )
+    plot_bar(
+        bone_udist.reshape(-1),
+        10,
+        title=fname_prefix + "_bone_udist",
+        fname=f"{fname_prefix}_bone_udist_{fname_suffix}",
+        ignore_zero=False,
+    )
+    return feature
+
+
 def get_class_geo_feature(label, X, k):
     # print(f"get_class_geo_feature, label: {label}, shape: {X.shape}")
     """
@@ -242,7 +350,7 @@ def get_class_geo_feature(label, X, k):
         # knn_edist = get_knn_edist(euclidean_dist, k)
         knn_edist = sk_neighbors.kneighbors_graph(X, k, mode="distance").toarray()
 
-        geodesic_dist, predecessors = get_geodesic_dist(knn_edist)
+        geodesic_dist, predecessors = get_geo_dist(knn_edist)
 
         path_ave_egr, path_hop, path_dict = get_path_ave_egr(
             euclidean_dist, geodesic_dist, predecessors
@@ -266,8 +374,8 @@ def get_class_geo_feature(label, X, k):
 
         class_uhop = np.array([bone_uhop.mean(), bone_uhop.max()])  # min always 0
 
-        path_ave_egr = path_ave_egr.astype(np.float32)
-        geodesic_dist = geodesic_dist.astype(np.float32)
+        # path_ave_egr = path_ave_egr.astype(np.float32)
+        # geodesic_dist = geodesic_dist.astype(np.float32)
 
         feature["label"] = label
         # feature['data'] = X

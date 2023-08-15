@@ -81,7 +81,7 @@ LeNet = nn.Sequential(
 
 
 if __name__ == '__main__':
-    from data_utils import load_data_mnist
+    from hhw_code.datasets.data_utils import load_data_mnist
     
     # print(LeNet)
     # X = torch.rand(1, 1, 28, 28)

@@ -6,3 +6,6 @@ scikit-learn
 umap-learn
 matplotlib
 seaborn
+umap-learn
+cProfile
+idx2numpy
